@@ -48,12 +48,11 @@
     // ==========================================
     // 1. MASUKKAN URL GOOGLE APPS SCRIPT DI SINI
     // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbykQCrDTYE9tdgDgfGpmyX_twAyWIBbirefBgGspSwnextZCiXk43anacU2Zp_-NskG/exec"; 
-    // Contoh: "https://script.google.com/macros/s/AKfycby.../exec"
+    const API_URL = "https://script.google.com/macros/s/AKfycbwkb_jsbOzYkAKSIdKZeU2Ywy3Bjey9M7qygDpEN-mojXNvtNvaV78y2S-G3Swz7qC-/exec"; 
+    // Contoh: "https://script.google.com/macros/s/AKfy.../exec"
 
     const generateIdKiriman = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 
-    // Kumpulan SVG (Ikon)
     const CameraIcon = ({ className="w-6 h-6" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>);
     const HeartIcon = ({ className="w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 016.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"></path></svg>);
     const CloseIcon = ({ className="w-6 h-6" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>);
@@ -118,7 +117,6 @@
         return () => clearInterval(timer);
       }, []);
 
-      // FETCH JADWAL HARI INI VIA REST API
       useEffect(() => {
         if (!currentDay || syncStatus !== 'idle') return;
         
@@ -127,8 +125,8 @@
           if (API_URL.includes("ISI_DENGAN")) {
               setTimeout(() => {
                   setLocalCache({
-                    classes: { "SIMULASI-123": { id_kelas: "K-01", nama_kelas: "Kelas Simulasi", lokasi_ruang: "Lab" } },
-                    schedules: { "K-01": [{ jam_mulai: "01:00", jam_selesai: "23:00", nama_guru: "Guru Simulasi", mata_pelajaran: "Simulasi", nip: "-" }] }
+                    classes: { "SIMULASI-123": { id_kelas: "K-01", nama_kelas: "Kelas VII A", lokasi_ruang: "Ruang 1" } },
+                    schedules: { "Kelas VII A": [{ jam_mulai: "01:00", jam_selesai: "23:00", nama_guru: "Guru Simulasi, S.Pd.", mata_pelajaran: "Simulasi IT", nip: "123456" }] }
                   });
                   setSyncStatus('success');
               }, 1000);
@@ -181,27 +179,38 @@
           return;
         }
 
-        const kelas = localCache.classes[token];
+        const kelas = localCache.classes[token.trim()];
         if (!kelas) {
           setApiError('QR Code tidak dikenali oleh sistem.');
           setModalPhase('ERROR');
           return;
         }
 
-        const schedules = localCache.schedules[kelas.id_kelas];
+        // PENTING: Mencari di Schedules menggunakan NAMA KELAS (Relasional)
+        const schedules = localCache.schedules[kelas.nama_kelas.trim()];
         const activeSched = checkScheduleByTime(schedules);
 
         if (activeSched) {
           setScanResult({
-            id_kelas: kelas.id_kelas, nama_kelas: kelas.nama_kelas, lokasi_ruang: kelas.lokasi_ruang,
-            teacherName: activeSched.nama_guru, nip: activeSched.nip, subject: activeSched.mata_pelajaran,
-            waktu_mulai: activeSched.jam_mulai, waktu_selesai: activeSched.jam_selesai
+            id_kelas: kelas.id_kelas, 
+            nama_kelas: kelas.nama_kelas, 
+            lokasi_ruang: kelas.lokasi_ruang,
+            teacherName: activeSched.nama_guru, 
+            nip: activeSched.nip, 
+            subject: activeSched.mata_pelajaran,
+            waktu_mulai: activeSched.jam_mulai, 
+            waktu_selesai: activeSched.jam_selesai
           });
         } else {
           setScanResult({
-            id_kelas: kelas.id_kelas, nama_kelas: kelas.nama_kelas, lokasi_ruang: kelas.lokasi_ruang,
-            teacherName: "Luar Jam Pelajaran", nip: "-", subject: "Kegiatan Ekstra",
-            waktu_mulai: "-", waktu_selesai: "-"
+            id_kelas: kelas.id_kelas, 
+            nama_kelas: kelas.nama_kelas, 
+            lokasi_ruang: kelas.lokasi_ruang,
+            teacherName: "Luar Jam Pelajaran", 
+            nip: "-", 
+            subject: "Tidak ada jadwal (Mapel Ekstra)",
+            waktu_mulai: "-", 
+            waktu_selesai: "-"
           });
         }
         setModalPhase('FORM');
@@ -227,11 +236,11 @@
             setSelectedCameraId(defaultCam);
             setModalPhase('SCANNING');
           } else {
-            setApiError("Kamera tidak terdeteksi.");
+            setApiError("Kamera tidak terdeteksi di perangkat Anda.");
             setModalPhase('ERROR');
           }
         }).catch(err => {
-           setApiError("Akses kamera ditolak oleh browser. Mohon izinkan kamera.");
+           setApiError("Izin kamera ditolak. Mohon izinkan akses kamera di pengaturan browser.");
            setModalPhase('ERROR');
         });
       };
@@ -252,7 +261,6 @@
         return () => { if (scanner && scanner.isScanning) scanner.stop().catch(e=>console.log(e)); };
       }, [isModalOpen, modalPhase, selectedCameraId]);
 
-      // SUBMIT DATA VIA REST API POST
       const submitData = async () => {
         setModalPhase('LOADING');
         const payload = {
@@ -274,7 +282,6 @@
         try {
           const response = await fetch(API_URL, {
             method: 'POST',
-            // Trik untuk bypass preflight CORS di GAS
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'submit', payload: payload })
           });
@@ -350,6 +357,7 @@
 
           <footer className="z-10 w-full text-center py-4"><h2 className="text-xs font-bold text-slate-300 tracking-wide">SMP Negeri 1 Pagaden</h2></footer>
 
+          {}
           {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{backgroundColor: 'rgba(5, 8, 18, 0.85)'}}>
               <div className="relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col" style={{backgroundColor: '#0f172a', border: '1px solid #1e293b'}}>
@@ -363,7 +371,7 @@
                   {modalPhase === 'PERMISSION' && (
                     <div className="flex flex-col items-center justify-center py-10 text-center"><SpinnerIcon className="w-12 h-12 text-blue-400 mb-4" />
                       <p className="text-sm font-semibold text-slate-200">Meminta Akses Kamera</p>
-                      <p className="text-[11px] text-slate-400 mt-2">Mohon ketuk <strong>"Allow"</strong> di browser Anda.</p>
+                      <p className="text-[11px] text-slate-400 mt-2">Mohon ketuk <strong>"Allow/Izinkan"</strong> di browser Anda.</p>
                     </div>
                   )}
 
@@ -375,7 +383,7 @@
                       </div>
                       {cameras.length > 0 && (
                         <div className="w-full mt-2">
-                          <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase text-center">Ganti Kamera Jika Buram</label>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase text-center">Ganti Kamera Jika Buram/Salah</label>
                           <select value={selectedCameraId} onChange={(e) => setSelectedCameraId(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 text-center">
                             {cameras.map((cam, idx) => (<option key={cam.id} value={cam.id}>{cam.label || `Kamera ${idx + 1}`}</option>))}
                           </select>
@@ -403,7 +411,7 @@
                           <div className="flex flex-col"><span className="text-sm font-semibold text-slate-200">Guru Pengganti</span><span className="text-[10px] text-slate-400">Centang jika inval.</span></div>
                         </label>
                       </div>
-                      <button onClick={submitData} className="mt-6 w-full py-3.5 rounded-xl font-bold text-sm shadow-lg text-white" style={{background: 'linear-gradient(90deg, #2563eb, #4f46e5)'}}>Kirim Presensi Sekarang</button>
+                      <button onClick={submitData} className="mt-6 w-full py-3.5 rounded-xl font-bold text-sm shadow-lg text-white transition-transform active:scale-95" style={{background: 'linear-gradient(90deg, #2563eb, #4f46e5)'}}>Kirim Presensi Sekarang</button>
                     </div>
                   )}
 
