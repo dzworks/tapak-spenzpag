@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>TAPAK - SMP Negeri 1 Pagaden</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #080c17; color: #f1f5f9; }
+    
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.08); opacity: 0.2; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .animate-pulse-ring { animation: pulseRing 3s infinite ease-in-out; }
+    
+    @keyframes scanLine {
+      0% { top: 0%; opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { top: 92%; opacity: 0.8; }
+    }
+    .animate-scan-line { animation: scanLine 2s infinite ease-in-out; }
+    
+    #reader video {
+      object-fit: cover !important;
+      border-radius: 1rem;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    #reader__dashboard_section_csr { display: none !important; }
+  </style>
+</head>
+<body class="selection:bg-blue-500 selection:text-white">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ==========================================
+    // 1. MASUKKAN URL GOOGLE APPS SCRIPT DI SINI
+    // ==========================================
+    const API_URL = "https://script.google.com/macros/s/AKfycbykQCrDTYE9tdgDgfGpmyX_twAyWIBbirefBgGspSwnextZCiXk43anacU2Zp_-NskG/exec"; 
+    // Contoh: "https://script.google.com/macros/s/AKfycby.../exec"
+
+    const generateIdKiriman = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+
+    // Kumpulan SVG (Ikon)
+    const CameraIcon = ({ className="w-6 h-6" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>);
+    const HeartIcon = ({ className="w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 016.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"></path></svg>);
+    const CloseIcon = ({ className="w-6 h-6" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>);
+    const SpinnerIcon = ({ className="w-6 h-6" }) => (<svg className={`animate-spin ${className}`} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>);
+    const CheckCircleIcon = ({ className="w-12 h-12" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>);
+
+    const playSuccessChime = () => {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.15);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(now); osc.stop(now + 0.4);
+      } catch (e) { }
+    };
+
+    function App() {
+      const [time, setTime] = useState('');
+      const [dateStr, setDateStr] = useState('');
+      const [currentDay, setCurrentDay] = useState('');
+      
+      const [localCache, setLocalCache] = useState(null);
+      const [syncStatus, setSyncStatus] = useState('idle'); 
+
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [modalPhase, setModalPhase] = useState('CLOSED'); 
+      const [apiError, setApiError] = useState(null);
+      
+      const [cameras, setCameras] = useState([]);
+      const [selectedCameraId, setSelectedCameraId] = useState('');
+      const html5QrCodeRef = useRef(null);
+
+      const [kegiatan, setKegiatan] = useState('');
+      const [isPengganti, setIsPengganti] = useState(false);
+      const [scanResult, setScanResult] = useState(null);
+      const [scannedToken, setScannedToken] = useState('');
+
+      useEffect(() => {
+        const updateClock = () => {
+          const now = new Date();
+          const hours = String(now.getHours()).padStart(2, '0');
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          const seconds = String(now.getSeconds()).padStart(2, '0');
+          setTime(`${hours}:${minutes}:${seconds} WIB`);
+
+          const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+          setDateStr(now.toLocaleDateString('id-ID', options));
+          
+          const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+          setCurrentDay(days[now.getDay()]);
+        };
+        updateClock();
+        const timer = setInterval(updateClock, 1000);
+        return () => clearInterval(timer);
+      }, []);
+
+      // FETCH JADWAL HARI INI VIA REST API
+      useEffect(() => {
+        if (!currentDay || syncStatus !== 'idle') return;
+        
+        const fetchScheduleLocally = async () => {
+          setSyncStatus('syncing');
+          if (API_URL.includes("ISI_DENGAN")) {
+              setTimeout(() => {
+                  setLocalCache({
+                    classes: { "SIMULASI-123": { id_kelas: "K-01", nama_kelas: "Kelas Simulasi", lokasi_ruang: "Lab" } },
+                    schedules: { "K-01": [{ jam_mulai: "01:00", jam_selesai: "23:00", nama_guru: "Guru Simulasi", mata_pelajaran: "Simulasi", nip: "-" }] }
+                  });
+                  setSyncStatus('success');
+              }, 1000);
+              return;
+          }
+
+          try {
+            const response = await fetch(`${API_URL}?action=init&hariIni=${currentDay}`);
+            const resData = await response.json();
+            
+            if (resData.status === 'success') {
+              setLocalCache(resData.data);
+              setSyncStatus('success');
+            } else {
+              setSyncStatus('error');
+            }
+          } catch (error) {
+            setSyncStatus('error');
+          }
+        };
+
+        fetchScheduleLocally();
+      }, [currentDay, syncStatus]);
+
+      const checkScheduleByTime = (schedules) => {
+        if (!schedules || schedules.length === 0) return null;
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        for (let sched of schedules) {
+          if (!sched.jam_mulai || !sched.jam_selesai) continue;
+          const startParts = sched.jam_mulai.toString().replace('.', ':').split(':');
+          const endParts = sched.jam_selesai.toString().replace('.', ':').split(':');
+          if (startParts.length < 2 || endParts.length < 2) continue;
+
+          const startMins = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+          const endMins = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+
+          if (currentMinutes >= startMins && currentMinutes <= endMins) return sched;
+        }
+        return null;
+      };
+
+      const handleQrMatch = (token) => {
+        setScannedToken(token);
+        
+        if (!localCache || !localCache.classes) {
+          setApiError('Aplikasi masih mengunduh jadwal. Tunggu sebentar.');
+          setModalPhase('ERROR');
+          return;
+        }
+
+        const kelas = localCache.classes[token];
+        if (!kelas) {
+          setApiError('QR Code tidak dikenali oleh sistem.');
+          setModalPhase('ERROR');
+          return;
+        }
+
+        const schedules = localCache.schedules[kelas.id_kelas];
+        const activeSched = checkScheduleByTime(schedules);
+
+        if (activeSched) {
+          setScanResult({
+            id_kelas: kelas.id_kelas, nama_kelas: kelas.nama_kelas, lokasi_ruang: kelas.lokasi_ruang,
+            teacherName: activeSched.nama_guru, nip: activeSched.nip, subject: activeSched.mata_pelajaran,
+            waktu_mulai: activeSched.jam_mulai, waktu_selesai: activeSched.jam_selesai
+          });
+        } else {
+          setScanResult({
+            id_kelas: kelas.id_kelas, nama_kelas: kelas.nama_kelas, lokasi_ruang: kelas.lokasi_ruang,
+            teacherName: "Luar Jam Pelajaran", nip: "-", subject: "Kegiatan Ekstra",
+            waktu_mulai: "-", waktu_selesai: "-"
+          });
+        }
+        setModalPhase('FORM');
+        playSuccessChime();
+      };
+
+      const handleStartCamera = () => {
+        setIsModalOpen(true);
+        setModalPhase('PERMISSION');
+        setApiError(null);
+
+        Html5Qrcode.getCameras().then(devices => {
+          if (devices && devices.length > 0) {
+            setCameras(devices);
+            let defaultCam = devices[0].id;
+            for (let i = 0; i < devices.length; i++) {
+              let label = devices[i].label.toLowerCase();
+              if (label.includes("back") || label.includes("belakang") || label.includes("environment")) {
+                defaultCam = devices[i].id;
+                break;
+              }
+            }
+            setSelectedCameraId(defaultCam);
+            setModalPhase('SCANNING');
+          } else {
+            setApiError("Kamera tidak terdeteksi.");
+            setModalPhase('ERROR');
+          }
+        }).catch(err => {
+           setApiError("Akses kamera ditolak oleh browser. Mohon izinkan kamera.");
+           setModalPhase('ERROR');
+        });
+      };
+
+      useEffect(() => {
+        let scanner = null;
+        if (isModalOpen && modalPhase === 'SCANNING' && selectedCameraId) {
+          scanner = new Html5Qrcode("reader");
+          html5QrCodeRef.current = scanner;
+          const config = { fps: 15, qrbox: (vw, vh) => ({ width: Math.min(vw, vh) * 0.75, height: Math.min(vw, vh) * 0.75 }), aspectRatio: 1.0 };
+
+          scanner.start(
+            selectedCameraId, config,
+            (decodedText) => { if (scanner.isScanning) scanner.stop(); handleQrMatch(decodedText); },
+            () => {}
+          ).catch(err => { console.warn("Camera init failed:", err); });
+        }
+        return () => { if (scanner && scanner.isScanning) scanner.stop().catch(e=>console.log(e)); };
+      }, [isModalOpen, modalPhase, selectedCameraId]);
+
+      // SUBMIT DATA VIA REST API POST
+      const submitData = async () => {
+        setModalPhase('LOADING');
+        const payload = {
+          qr_code: scannedToken,
+          id_kiriman: generateIdKiriman(),
+          kegiatan_pembelajaran: kegiatan.trim() !== '' ? kegiatan : '-',
+          pengganti: isPengganti ? 'Y' : 'N',
+          data_jadwal: scanResult
+        };
+
+        if (API_URL.includes("ISI_DENGAN")) {
+             setTimeout(() => {
+                setScanResult({ ...scanResult, timestamp: new Date().toLocaleTimeString('id-ID') });
+                setModalPhase('SUCCESS'); playSuccessChime();
+             }, 1000);
+             return;
+        }
+
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            // Trik untuk bypass preflight CORS di GAS
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'submit', payload: payload })
+          });
+          
+          const resData = await response.json();
+          if (resData.status === 'success') {
+            playSuccessChime();
+            setScanResult({ ...scanResult, timestamp: resData.data.waktu_absen });
+            setModalPhase('SUCCESS');
+          } else {
+            setApiError(resData.message || 'Gagal menyimpan.');
+            setModalPhase('ERROR');
+          }
+        } catch (err) {
+          setApiError('Koneksi terputus ke server.');
+          setModalPhase('ERROR');
+        }
+      };
+
+      const handleCloseModal = () => {
+        if (html5QrCodeRef.current?.isScanning) html5QrCodeRef.current.stop().catch(e=>e);
+        setIsModalOpen(false); setModalPhase('CLOSED'); setScannedToken('');
+        setKegiatan(''); setIsPengganti(false); setScanResult(null); setCameras([]); setSelectedCameraId('');
+      };
+
+      return (
+        <div className="relative flex flex-col justify-between items-center min-h-screen p-5 max-w-md mx-auto overflow-hidden shadow-2xl">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <header className="z-10 text-center mt-4 w-full space-y-3 flex flex-col items-center">
+            <h1 className="text-[4rem] font-black tracking-widest text-transparent bg-clip-text drop-shadow-md" style={{backgroundImage: 'linear-gradient(90deg, #44d0f5, #3b82f6)'}}>TAPAK</h1>
+            <div className="inline-block px-4 py-1.5 rounded-full border shadow-lg backdrop-blur-md" style={{borderColor: '#214e6c', backgroundColor: 'rgba(15, 23, 42, 0.6)'}}>
+              <p className="text-[10px] font-semibold text-slate-300 tracking-wide uppercase"><span className="text-cyan-400 font-bold">T</span>ATA KEH<span className="text-cyan-400 font-bold">A</span>DIRAN <span className="text-cyan-400 font-bold">P</span>ENDIDIK DAL<span className="text-cyan-400 font-bold">A</span>M <span className="text-cyan-400 font-bold">K</span>ELAS</p>
+            </div>
+          </header>
+
+          <div className="z-10 w-full mt-6 rounded-2xl p-4 shadow-lg" style={{backgroundColor: '#16233d', border: '1px solid #1e3a5f'}}>
+            <div className="flex items-start gap-4">
+              <div className="p-2.5 rounded-xl flex-shrink-0 mt-0.5" style={{backgroundColor: '#1d3257', color: '#60a5fa'}}><HeartIcon className="w-5 h-5" /></div>
+              <div className="flex-1 text-left">
+                <p className="text-xs font-bold text-blue-200 leading-snug">Selamat datang, Bapak/Ibu Guru hebat.</p>
+                <p className="text-[11px] text-slate-300 leading-relaxed mt-1.5 opacity-90">Terima kasih atas dedikasi tiada henti bagi anak bangsa. Jangan khawatir, TAPAK hadir untuk mempermudah tugas Anda.</p>
+              </div>
+            </div>
+          </div>
+
+          <main className="z-10 my-auto flex flex-col items-center justify-center w-full py-4 mt-8">
+            <div className="flex flex-col items-center justify-center mb-10 text-center">
+              <span className="text-[2.25rem] font-mono font-bold tracking-widest drop-shadow-md" style={{color: '#6e9fe5'}}>{time || '00:00:00 WIB'}</span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs font-medium text-slate-300">{dateStr}</span>
+                {syncStatus === 'syncing' && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>}
+                {syncStatus === 'success' && <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>}
+                {syncStatus === 'error' && <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>}
+              </div>
+            </div>
+
+            <div className="relative group flex items-center justify-center mb-12">
+              <div className="absolute inset-0 rounded-full animate-pulse-ring" style={{backgroundColor: 'rgba(59, 130, 246, 0.4)'}}></div>
+              <button onClick={handleStartCamera} className="relative flex flex-col items-center justify-center w-40 h-40 rounded-full shadow-2xl transition-transform active:scale-95 cursor-pointer" style={{background: 'linear-gradient(145deg, #324fa3, #243575)', border: '2px solid #486ae0'}}>
+                <div className="p-3 mb-2 rounded-2xl border pointer-events-none" style={{backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)'}}><CameraIcon className="w-8 h-8 text-white" /></div>
+                <span className="text-sm font-bold text-white tracking-wide pointer-events-none">Mulai Absen</span>
+                <span className="text-[10px] text-blue-200 mt-0.5 opacity-80 pointer-events-none">Ketuk Kamera</span>
+              </button>
+            </div>
+
+            <div className="w-full rounded-2xl p-4 text-left space-y-3.5 text-[11px] text-slate-300 shadow-md" style={{backgroundColor: '#131c33', border: '1px solid #1e2c4a'}}>
+              <div className="flex items-start gap-3"><span className="flex items-center justify-center w-5 h-5 rounded-full font-bold text-[10px] flex-shrink-0 mt-0.5" style={{backgroundColor: '#1d3257', color: '#60a5fa'}}>1</span><p>Ketuk tombol <strong className="text-white">Mulai Absen</strong> di tengah layar.</p></div>
+              <div className="flex items-start gap-3"><span className="flex items-center justify-center w-5 h-5 rounded-full font-bold text-[10px] flex-shrink-0 mt-0.5" style={{backgroundColor: '#1d3257', color: '#60a5fa'}}>2</span><p>Izinkan akses kamera di pop-up browser Anda.</p></div>
+              <div className="flex items-start gap-3"><span className="flex items-center justify-center w-5 h-5 rounded-full font-bold text-[10px] flex-shrink-0 mt-0.5" style={{backgroundColor: '#1d3257', color: '#60a5fa'}}>3</span><p>Arahkan kamera ke Kode QR di kelas Anda.</p></div>
+            </div>
+          </main>
+
+          <footer className="z-10 w-full text-center py-4"><h2 className="text-xs font-bold text-slate-300 tracking-wide">SMP Negeri 1 Pagaden</h2></footer>
+
+          {isModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{backgroundColor: 'rgba(5, 8, 18, 0.85)'}}>
+              <div className="relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col" style={{backgroundColor: '#0f172a', border: '1px solid #1e293b'}}>
+                
+                <div className="flex items-center justify-between px-5 py-4 border-b" style={{borderColor: '#1e293b', backgroundColor: '#111827'}}>
+                  <span className="text-sm font-bold text-slate-200">{(modalPhase === 'PERMISSION' ? 'Otorisasi' : (modalPhase === 'SCANNING' ? 'Pindai QR' : 'Sistem'))}</span>
+                  <button onClick={handleCloseModal} className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"><CloseIcon className="w-6 h-6" /></button>
+                </div>
+
+                <div className="p-5 flex flex-col items-center justify-center min-h-[300px]">
+                  {modalPhase === 'PERMISSION' && (
+                    <div className="flex flex-col items-center justify-center py-10 text-center"><SpinnerIcon className="w-12 h-12 text-blue-400 mb-4" />
+                      <p className="text-sm font-semibold text-slate-200">Meminta Akses Kamera</p>
+                      <p className="text-[11px] text-slate-400 mt-2">Mohon ketuk <strong>"Allow"</strong> di browser Anda.</p>
+                    </div>
+                  )}
+
+                  {modalPhase === 'SCANNING' && (
+                    <div className="flex flex-col items-center w-full">
+                      <div className="relative w-64 h-64 rounded-2xl overflow-hidden bg-black border-2 border-blue-500/40 shadow-inner mb-4">
+                        <div id="reader" className="w-full h-full"></div>
+                        <div className="absolute inset-0 pointer-events-none p-4"><div className="w-full h-0.5 mt-8 shadow-[0_0_12px_#3b82f6] relative animate-scan-line" style={{background: 'linear-gradient(90deg, transparent, #3b82f6, transparent)'}}></div></div>
+                      </div>
+                      {cameras.length > 0 && (
+                        <div className="w-full mt-2">
+                          <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase text-center">Ganti Kamera Jika Buram</label>
+                          <select value={selectedCameraId} onChange={(e) => setSelectedCameraId(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 text-center">
+                            {cameras.map((cam, idx) => (<option key={cam.id} value={cam.id}>{cam.label || `Kamera ${idx + 1}`}</option>))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {modalPhase === 'FORM' && scanResult && (
+                    <div className="w-full animate-in fade-in zoom-in-95 duration-300">
+                      <div className="rounded-2xl p-4 mb-4 shadow-lg" style={{background: 'linear-gradient(135deg, #1e293b, #111827)', border: '1px solid #334155'}}>
+                        <div className="flex justify-between items-start mb-2"><span className="bg-blue-500/20 text-blue-400 text-[10px] font-bold px-2.5 py-1 rounded-full">{scanResult.nama_kelas}</span><span className="text-[10px] text-slate-400 font-mono mt-0.5">{scanResult.lokasi_ruang}</span></div>
+                        <h4 className="text-base font-extrabold text-white mt-1">{scanResult.teacherName}</h4>
+                        <p className="text-xs text-blue-300 font-medium mt-1">{scanResult.subject}</p>
+                      </div>
+                      <div className="space-y-4 w-full">
+                        <div>
+                          <textarea value={kegiatan} onChange={(e) => setKegiatan(e.target.value)} placeholder="Materi yang diajarkan..." className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 transition-all resize-none h-20"></textarea>
+                        </div>
+                        <label className="flex items-center gap-3 p-3 border border-slate-700 rounded-xl cursor-pointer" style={{backgroundColor: '#131e33'}}>
+                          <div className="relative flex items-center"><input type="checkbox" checked={isPengganti} onChange={(e) => setIsPengganti(e.target.checked)} className="sr-only peer" />
+                            <div className="w-5 h-5 border-2 border-slate-500 rounded peer-checked:bg-blue-500 peer-checked:border-blue-500" style={{backgroundColor: '#0f172a'}}></div>
+                            <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                          <div className="flex flex-col"><span className="text-sm font-semibold text-slate-200">Guru Pengganti</span><span className="text-[10px] text-slate-400">Centang jika inval.</span></div>
+                        </label>
+                      </div>
+                      <button onClick={submitData} className="mt-6 w-full py-3.5 rounded-xl font-bold text-sm shadow-lg text-white" style={{background: 'linear-gradient(90deg, #2563eb, #4f46e5)'}}>Kirim Presensi Sekarang</button>
+                    </div>
+                  )}
+
+                  {modalPhase === 'LOADING' && (
+                    <div className="flex flex-col items-center justify-center py-10"><SpinnerIcon className="w-12 h-12 text-blue-400 mb-4" /><p className="text-xs text-slate-300">Menyimpan ke Server...</p></div>
+                  )}
+
+                  {modalPhase === 'ERROR' && (
+                    <div className="flex flex-col items-center text-center w-full">
+                      <div className="p-3 bg-rose-500/10 text-rose-400 border border-rose-500/30 rounded-full mb-3"><CloseIcon className="w-8 h-8" /></div>
+                      <p className="text-xs text-slate-300 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 mb-5 w-full">{apiError}</p>
+                      <button onClick={handleStartCamera} className="w-full py-3 rounded-xl bg-slate-800 border border-slate-700 text-cyan-300 font-bold text-xs">Coba Lagi</button>
+                    </div>
+                  )}
+
+                  {modalPhase === 'SUCCESS' && scanResult && (
+                    <div className="flex flex-col items-center text-center w-full">
+                      <div className="relative mb-3"><div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping"></div><div className="relative p-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full"><CheckCircleIcon className="w-12 h-12" /></div></div>
+                      <h3 className="text-xl font-extrabold text-emerald-400 mb-4">Berhasil!</h3>
+                      <div className="w-full rounded-2xl p-4 text-left space-y-3 text-xs mb-6" style={{backgroundColor: '#162331', border: '1px solid #1e3a47'}}>
+                        <div><span className="text-slate-400 text-[10px] uppercase font-semibold">Nama Pendidik</span><p className="text-sm font-bold text-slate-100 mt-0.5">{scanResult.teacherName}</p></div>
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/50"><div><span className="text-slate-400 text-[10px] uppercase">Waktu Tercatat</span><p className="font-medium text-emerald-400 font-mono mt-0.5">{scanResult.timestamp}</p></div></div>
+                      </div>
+                      <button onClick={handleCloseModal} className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">Selesai</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
