@@ -36,6 +36,14 @@
       height: 100% !important;
     }
     #reader__dashboard_section_csr { display: none !important; }
+    
+    @keyframes indeterminate {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+    .animate-indeterminate {
+      animation: indeterminate 1.5s infinite linear;
+    }
   </style>
 </head>
 <body class="selection:bg-blue-500 selection:text-white">
@@ -47,10 +55,11 @@
 
     // ==========================================
     // MASUKKAN URL GOOGLE APPS SCRIPT DI SINI (Pastikan berakhiran /exec)
+    // Dilarang mengubah URL ini sesuai instruksi
     // ==========================================
     const API_URL = "https://script.google.com/macros/s/AKfycbwkb_jsbOzYkAKSIdKZeU2Ywy3Bjey9M7qygDpEN-mojXNvtNvaV78y2S-G3Swz7qC-/exec"; 
     
-    const generateIdKiriman = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    // Fungsi generateIdKiriman (Acak) telah dihapus karena ID kini digenerate secara terstruktur di dalam submitData
 
     // SVG Icons
     const CameraIcon = ({ className="w-6 h-6" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>);
@@ -59,11 +68,13 @@
     const SpinnerIcon = ({ className="w-6 h-6" }) => (<svg className={`animate-spin ${className}`} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>);
     const CheckCircleIcon = ({ className="w-12 h-12" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>);
     
-    // Ikon Baru untuk Desain Jadwal
+    // Ikon untuk Desain Jadwal & Rescan
     const ClockIcon = ({ className="w-3 h-3" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>);
     const LocationIcon = ({ className="w-3 h-3" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>);
     const BookIcon = ({ className="w-3.5 h-3.5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>);
     const NextIcon = ({ className="w-3 h-3" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>);
+    const RefreshIcon = ({ className="w-3.5 h-3.5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>);
+    const AlertIcon = ({ className="w-6 h-6" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>);
 
     const playSuccessChime = () => {
       try {
@@ -100,9 +111,11 @@
       const html5QrCodeRef = useRef(null);
 
       const [kegiatan, setKegiatan] = useState('');
+      const [kegiatanError, setKegiatanError] = useState(false);
       const [isPengganti, setIsPengganti] = useState(false);
       const [scanResult, setScanResult] = useState(null);
       const [scannedToken, setScannedToken] = useState('');
+      const [showConfirmation, setShowConfirmation] = useState(false);
 
       useEffect(() => {
         const updateClock = () => {
@@ -132,7 +145,7 @@
               setTimeout(() => {
                   setLocalCache({
                     classes: { "SIMULASI-123": { id_kelas: "K-01", nama_kelas: "Kelas VII A", lokasi_ruang: "Ruang 1" } },
-                    schedules: { "Kelas VII A": [{ jam_ke: "1-2", mapel_ke: "1", jam_mulai: "07:00", jam_selesai: "23:00", nama_guru: "Drs. Budi Santoso", mata_pelajaran: "Matematika", nip: "123456" }] }
+                    schedules: { "Kelas VII A": [{ jam_ke: "1-2", mapel_ke: "1", jam_mulai: "07:00", jam_selesai: "23:00", nama_guru: "Drs. Budi Santoso", mata_pelajaran: "Matematika", nip: "123456", kode_guru: "G-01" }] }
                   });
                   setSyncStatus('success');
               }, 1000);
@@ -212,6 +225,7 @@
             lokasi_ruang: kelas.lokasi_ruang,
             jam_ke: activeSched.jam_ke,
             mapel_ke: activeSched.mapel_ke,
+            kode_guru: activeSched.kode_guru,
             teacherName: activeSched.nama_guru, 
             nip: activeSched.nip, 
             subject: activeSched.mata_pelajaran,
@@ -227,6 +241,7 @@
             lokasi_ruang: kelas.lokasi_ruang,
             jam_ke: "-",
             mapel_ke: "-",
+            kode_guru: "-",
             teacherName: "Luar Jam Pelajaran", 
             nip: "-", 
             subject: "Kegiatan Ekstra/Kosong",
@@ -272,7 +287,16 @@
         if (isModalOpen && modalPhase === 'SCANNING' && selectedCameraId) {
           scanner = new Html5Qrcode("reader");
           html5QrCodeRef.current = scanner;
-          const config = { fps: 15, qrbox: (vw, vh) => ({ width: Math.min(vw, vh) * 0.75, height: Math.min(vw, vh) * 0.75 }), aspectRatio: 1.0 };
+          
+          const config = { 
+            fps: 15, 
+            qrbox: (vw, vh) => {
+              // Pengaman: memastikan ukuran minimal qrbox adalah 200px agar tidak terjadi error saat render awal
+              const size = Math.max(200, Math.min(vw, vh) * 0.75);
+              return { width: size, height: size };
+            }, 
+            aspectRatio: 1.0 
+          };
 
           scanner.start(
             selectedCameraId, config,
@@ -285,9 +309,23 @@
 
       const submitData = async () => {
         setModalPhase('LOADING');
+        
+        // Format: DDMMYYYY + NAMA KELAS (Tanpa Spasi/Simbol) + MAPEL + KODE GURU
+        const d = new Date();
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        
+        // Membersihkan karakter selain huruf dan angka
+        const cleanClass = scanResult.nama_kelas ? scanResult.nama_kelas.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : "UNK";
+        const cleanMapel = scanResult.mapel_ke ? scanResult.mapel_ke.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : "0";
+        const cleanGuru = scanResult.kode_guru ? scanResult.kode_guru.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : "UNK";
+        
+        const structuredId = `${dd}${mm}${yyyy}${cleanClass}${cleanMapel}${cleanGuru}`;
+
         const payload = {
           qr_code: scannedToken,
-          id_kiriman: generateIdKiriman(),
+          id_kiriman: structuredId,
           kegiatan_pembelajaran: kegiatan.trim() !== '' ? kegiatan : '-',
           pengganti: isPengganti ? 'Y' : 'N',
           data_jadwal: scanResult
@@ -327,7 +365,8 @@
       const handleCloseModal = () => {
         if (html5QrCodeRef.current?.isScanning) html5QrCodeRef.current.stop().catch(e=>e);
         setIsModalOpen(false); setModalPhase('CLOSED'); setScannedToken('');
-        setKegiatan(''); setIsPengganti(false); setScanResult(null); setCameras([]); setSelectedCameraId('');
+        setKegiatan(''); setKegiatanError(false); setIsPengganti(false); setScanResult(null); setCameras([]); setSelectedCameraId('');
+        setShowConfirmation(false);
       };
 
       return (
@@ -352,22 +391,65 @@
           </div>
 
           <main className="z-10 my-auto flex flex-col items-center justify-center w-full py-4 mt-8">
-            <div className="flex flex-col items-center justify-center mb-10 text-center">
+            
+            {/* AREA TANGGAL & PROGRESS BAR */}
+            <div className="flex flex-col items-center justify-center mb-8 text-center w-full">
               <span className="text-[2.25rem] font-mono font-bold tracking-widest drop-shadow-md" style={{color: '#6e9fe5'}}>{time || '00:00:00 WIB'}</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-medium text-slate-300">{dateStr}</span>
-                {syncStatus === 'syncing' && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>}
-                {syncStatus === 'success' && <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>}
-                {syncStatus === 'error' && <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>}
+              
+              <div className="flex flex-col items-center mt-2 w-full max-w-[220px]">
+                <span className="text-xs font-medium text-slate-300 mb-2.5">{dateStr}</span>
+                
+                {/* Teks Status */}
+                <div className="flex flex-col items-center transition-colors duration-300 mt-1 text-center">
+                  {syncStatus === 'syncing' && (
+                    <>
+                      <span className="text-[10px] font-bold tracking-wider uppercase text-blue-400 animate-pulse">Menyinkronkan Jadwal...</span>
+                      <span className="text-[9px] font-medium text-slate-500 normal-case tracking-normal mt-1">Pastikan Anda memiliki koneksi internet</span>
+                    </>
+                  )}
+                  {syncStatus === 'success' && (
+                    <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-400">Aplikasi Siap Digunakan</span>
+                  )}
+                  {syncStatus === 'error' && (
+                    <>
+                      <span className="text-[10px] font-bold tracking-wider uppercase text-rose-400">Gagal Memuat Jadwal</span>
+                      <span className="text-[9px] font-medium text-slate-500 normal-case tracking-normal mt-1">Periksa koneksi internet Anda dan muat ulang halaman.</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="relative group flex items-center justify-center mb-12">
-              <div className="absolute inset-0 rounded-full animate-pulse-ring" style={{backgroundColor: 'rgba(59, 130, 246, 0.4)'}}></div>
-              <button onClick={handleStartCamera} className="relative flex flex-col items-center justify-center w-40 h-40 rounded-full shadow-2xl transition-transform active:scale-95 cursor-pointer" style={{background: 'linear-gradient(145deg, #324fa3, #243575)', border: '2px solid #486ae0'}}>
-                <div className="p-3 mb-2 rounded-2xl border pointer-events-none" style={{backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)'}}><CameraIcon className="w-8 h-8 text-white" /></div>
-                <span className="text-sm font-bold text-white tracking-wide pointer-events-none">Mulai Absen</span>
-                <span className="text-[10px] text-blue-200 mt-0.5 opacity-80 pointer-events-none">Ketuk Kamera</span>
+            {/* AREA TOMBOL UTAMA BEKU (DISABLED) */}
+            <div className="relative group flex items-center justify-center mb-12 mt-4">
+              
+              {/* Progress Ring (Muncul saat Syncing) */}
+              {syncStatus === 'syncing' && (
+                <div className="absolute -inset-3.5 rounded-full border-[3px] border-slate-700/50 border-t-blue-400 border-r-blue-400 animate-spin shadow-[0_0_15px_rgba(96,165,250,0.3)]"></div>
+              )}
+
+              {/* Pulse Ring (Muncul saat Success) */}
+              {syncStatus === 'success' && (
+                <div className="absolute inset-0 rounded-full animate-pulse-ring" style={{backgroundColor: 'rgba(59, 130, 246, 0.4)'}}></div>
+              )}
+              
+              <button 
+                onClick={handleStartCamera} 
+                disabled={syncStatus !== 'success'}
+                className={`relative flex flex-col items-center justify-center w-40 h-40 rounded-full shadow-2xl transition-all duration-500 ${syncStatus === 'success' ? 'active:scale-95 cursor-pointer hover:shadow-[0_0_30px_rgba(59,130,246,0.3)]' : 'cursor-not-allowed grayscale opacity-75'}`}
+                style={
+                  syncStatus === 'success'
+                  ? { background: 'linear-gradient(145deg, #324fa3, #243575)', border: '2px solid #486ae0' }
+                  : { background: 'linear-gradient(145deg, #1e293b, #0f172a)', border: '2px solid #334155' }
+                }
+              >
+                <div className={`p-3 mb-2 rounded-2xl border pointer-events-none transition-colors duration-500 ${syncStatus === 'success' ? 'bg-white/10 border-white/20' : 'bg-slate-800/80 border-slate-700/80'}`}>
+                  <CameraIcon className={`w-8 h-8 transition-colors duration-500 ${syncStatus === 'success' ? 'text-white' : 'text-slate-500'}`} />
+                </div>
+                <span className={`text-sm font-bold tracking-wide pointer-events-none transition-colors duration-500 ${syncStatus === 'success' ? 'text-white' : 'text-slate-400'}`}>Mulai Absen</span>
+                <span className={`text-[10px] mt-0.5 pointer-events-none transition-colors duration-500 ${syncStatus === 'success' ? 'text-blue-200 opacity-80' : 'text-slate-500'}`}>
+                  {syncStatus === 'success' ? 'Ketuk Kamera' : 'Menunggu Jadwal'}
+                </span>
               </button>
             </div>
 
@@ -380,6 +462,7 @@
 
           <footer className="z-10 w-full text-center py-4"><h2 className="text-xs font-bold text-slate-300 tracking-wide">SMP Negeri 1 Pagaden</h2></footer>
 
+          {}
           {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{backgroundColor: 'rgba(5, 8, 18, 0.85)'}}>
               <div className="relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col" style={{backgroundColor: '#0f172a', border: '1px solid #1e293b'}}>
@@ -415,6 +498,7 @@
                     </div>
                   )}
 
+                  {}
                   {modalPhase === 'FORM' && scanResult && (
                     <div className="w-full animate-in fade-in zoom-in-95 duration-300">
                       
@@ -424,7 +508,7 @@
                         {/* 1. HEADER BLOCK BARU: Kelas & Jam Ke (Bertumpuk) */}
                         <div className="flex flex-col gap-2.5 mb-3 pb-3 border-b" style={{borderColor: 'rgba(51, 65, 85, 0.6)'}}>
                           <div className="flex justify-between items-center w-full">
-                            {/* Nama Kelas - Diperbesar */}
+                            {/* Nama Kelas */}
                             <div className="flex items-center gap-2.5">
                               <div className="relative flex-shrink-0">
                                 <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75"></div>
@@ -435,13 +519,13 @@
                               </span>
                             </div>
                             
-                            {/* Jam Ke - Diperbesar & Terpisah */}
+                            {/* Jam Ke */}
                             <div className="bg-indigo-600/30 border border-indigo-500/50 text-indigo-200 text-xs font-extrabold px-3 py-1.5 rounded-lg shadow-inner">
-                              Jam Ke-{scanResult.jam_ke}
+                              Jam Ke: {scanResult.jam_ke}
                             </div>
                           </div>
                           
-                          {/* Mapel Ke - Info Tambahan */}
+                          {/* Mapel Ke */}
                           <div className="flex">
                             <span className="bg-slate-800/80 text-slate-400 text-[10px] font-semibold px-2.5 py-1 rounded-md border border-slate-700/60">
                               Mapel Ke-{scanResult.mapel_ke}
@@ -453,7 +537,7 @@
                         <h4 className="text-base font-extrabold text-white mt-3 leading-tight">{scanResult.teacherName}</h4>
                         <p className="text-xs text-blue-300 font-medium mt-1.5 flex items-center gap-1.5"><BookIcon /> {scanResult.subject}</p>
                         
-                        {/* Waktu dan Ruangan (Divider maya) */}
+                        {/* Waktu dan Ruangan */}
                         <div className="flex items-center gap-2 mt-3.5 pt-1 text-[10px] text-slate-400 font-medium">
                           <span className="flex items-center gap-1"><ClockIcon /> {scanResult.waktu_mulai} - {scanResult.waktu_selesai} WIB</span>
                           <span className="text-slate-600">•</span>
@@ -473,18 +557,126 @@
                       {/* AKHIR KOTAK JADWAL BARU */}
 
                       <div className="space-y-4 w-full">
-                        <div>
-                          <textarea value={kegiatan} onChange={(e) => setKegiatan(e.target.value)} placeholder="Materi yang diajarkan..." className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 transition-all resize-none h-20 outline-none"></textarea>
+                        {/* AREA TEXTAREA BARU DENGAN LABEL */}
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                            Kegiatan Pembelajaran Sesi Ini <span className="text-red-500 text-xs">*</span>
+                          </label>
+                          <textarea 
+                            value={kegiatan} 
+                            onChange={(e) => {
+                              setKegiatan(e.target.value);
+                              if (e.target.value.trim() !== '') setKegiatanError(false);
+                            }} 
+                            placeholder="Tulis ringkasan kegiatan belajar disini..." 
+                            className={`w-full bg-slate-900 border rounded-xl p-3 text-sm text-white placeholder:text-slate-600 transition-all resize-none h-20 outline-none ${kegiatanError ? 'border-red-500 focus:border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-slate-700 focus:border-blue-500'}`}
+                          ></textarea>
+                          {kegiatanError && (
+                            <span className="text-[10px] text-red-400 font-medium animate-pulse mt-0.5">
+                              Keterangan kegiatan pembelajaran wajib diisi sebelum mengirim presensi.
+                            </span>
+                          )}
                         </div>
+                        
                         <label className="flex items-center gap-3 p-3 border border-slate-700 rounded-xl cursor-pointer" style={{backgroundColor: '#131e33'}}>
-                          <div className="relative flex items-center"><input type="checkbox" checked={isPengganti} onChange={(e) => setIsPengganti(e.target.checked)} className="sr-only peer" />
+                          <div className="relative flex items-center">
+                            <input type="checkbox" checked={isPengganti} onChange={(e) => setIsPengganti(e.target.checked)} className="sr-only peer" />
                             <div className="w-5 h-5 border-2 border-slate-500 rounded peer-checked:bg-blue-500 peer-checked:border-blue-500" style={{backgroundColor: '#0f172a'}}></div>
                             <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                           </div>
                           <div className="flex flex-col"><span className="text-sm font-semibold text-slate-200">Guru Pengganti</span><span className="text-[10px] text-slate-400">Centang jika inval.</span></div>
                         </label>
                       </div>
-                      <button onClick={submitData} className="mt-6 w-full py-3.5 rounded-xl font-bold text-sm shadow-lg text-white transition-transform active:scale-95" style={{background: 'linear-gradient(90deg, #2563eb, #4f46e5)'}}>Kirim Presensi Sekarang</button>
+
+                      <button onClick={() => {
+                        if (kegiatan.trim() === '') {
+                          setKegiatanError(true);
+                        } else {
+                          setShowConfirmation(true);
+                        }
+                      }} className="mt-6 w-full py-3.5 rounded-xl font-bold text-sm shadow-lg text-white transition-transform active:scale-95" style={{background: 'linear-gradient(90deg, #2563eb, #4f46e5)'}}>
+                        Kirim Presensi Sekarang
+                      </button>
+
+                      {/* TOMBOL SCAN ULANG BARU */}
+                      <div className="mt-4 text-center">
+                        <p className="text-[11px] text-slate-400">
+                          Bukan jadwal Anda?{' '}
+                          <button 
+                            onClick={() => {
+                              setScannedToken('');
+                              setKegiatan('');
+                              setKegiatanError(false);
+                              setIsPengganti(false);
+                              setScanResult(null);
+                              setShowConfirmation(false);
+                              setModalPhase('SCANNING');
+                            }}
+                            className="text-blue-400 font-bold hover:underline inline-flex items-center gap-1 transition-colors"
+                          >
+                            <RefreshIcon /> Klik disini untuk scan ulang
+                          </button>
+                        </p>
+                      </div>
+                      
+                    </div>
+                  )}
+
+                  {/* OVERLAY POP-UP KONFIRMASI INTEGRITAS */}
+                  {showConfirmation && modalPhase === 'FORM' && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md" style={{backgroundColor: 'rgba(15, 23, 42, 0.95)'}}>
+                      
+                      {/* Kontainer Utama Modal (Berubah jadi flex-col & overflow-hidden) */}
+                      <div className="w-full max-w-md max-h-[85vh] flex flex-col border border-slate-200 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 bg-slate-50 overflow-hidden">
+                        
+                        {/* Area Konten: Judul, Pertanyaan & Peringatan (Bisa di-scroll) */}
+                        <div className="p-5 overflow-y-auto flex-1">
+                          <div className="flex items-center gap-3 mb-5 text-red-600">
+                            <AlertIcon className="w-7 h-7 flex-shrink-0" />
+                            <h3 className="font-black text-base uppercase tracking-wide">Konfirmasi Integritas</h3>
+                          </div>
+                          
+                          <p className="text-base font-bold text-slate-800 mb-5 leading-relaxed">
+                            Apakah Anda mengonfirmasi bahwa presensi ini diisi langsung oleh Guru yang bersangkutan di dalam kelas sesuai jadwal?
+                          </p>
+                          
+                          <div className="bg-red-50 border border-red-200 p-4 rounded-xl mb-4 shadow-sm">
+                            <p className="text-sm font-bold text-red-600 leading-relaxed text-justify">
+                              Perhatian: Mewakilkan presensi kepada siswa, mengisi di luar ruang kelas, atau menggunakan duplikat QR Code merupakan pelanggaran integritas akademik dan kode etik guru.
+                            </p>
+                          </div>
+                          
+                          {/* Micro-copy yang dipisah dengan border tipis */}
+                          <div className="border-t border-slate-200 pt-3">
+                            <p className="text-[10px] text-slate-500 leading-relaxed text-justify">
+                              Sistem mencatat rekam jejak digital secara otomatis. Apabila terdapat kendala atau penyalahgunaan, mohon segera laporkan kepada Kepala Sekolah.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Area Footer: Tombol Ya & Batal (Sticky/Beku di bawah + Inverted Shadow) */}
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+                          <div className="flex flex-col gap-2.5">
+                            <button 
+                              onClick={() => {
+                                setShowConfirmation(false);
+                                submitData();
+                              }}
+                              className="w-full py-3.5 rounded-xl font-bold text-sm shadow-md text-white transition-transform active:scale-95 text-center leading-snug px-3" 
+                              style={{background: 'linear-gradient(90deg, #0284c7, #2563eb)'}}
+                            >
+                              Ya, Saya Guru Bersangkutan dan mengisi di dalam kelas sesuai jadwal
+                            </button>
+                            <button 
+                              onClick={() => setShowConfirmation(false)}
+                              className="w-full py-3 rounded-xl font-bold text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
                     </div>
                   )}
 
