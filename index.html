@@ -46,18 +46,24 @@
     const { useState, useEffect, useRef } = React;
 
     // ==========================================
-    // 1. MASUKKAN URL GOOGLE APPS SCRIPT DI SINI
+    // MASUKKAN URL GOOGLE APPS SCRIPT DI SINI (Pastikan berakhiran /exec)
     // ==========================================
     const API_URL = "https://script.google.com/macros/s/AKfycbwkb_jsbOzYkAKSIdKZeU2Ywy3Bjey9M7qygDpEN-mojXNvtNvaV78y2S-G3Swz7qC-/exec"; 
-    // Contoh: "https://script.google.com/macros/s/AKfy.../exec"
-
+    
     const generateIdKiriman = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 
+    // SVG Icons
     const CameraIcon = ({ className="w-6 h-6" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>);
     const HeartIcon = ({ className="w-5 h-5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 016.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"></path></svg>);
     const CloseIcon = ({ className="w-6 h-6" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>);
     const SpinnerIcon = ({ className="w-6 h-6" }) => (<svg className={`animate-spin ${className}`} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>);
     const CheckCircleIcon = ({ className="w-12 h-12" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>);
+    
+    // Ikon Baru untuk Desain Jadwal
+    const ClockIcon = ({ className="w-3 h-3" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>);
+    const LocationIcon = ({ className="w-3 h-3" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>);
+    const BookIcon = ({ className="w-3.5 h-3.5" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>);
+    const NextIcon = ({ className="w-3 h-3" }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>);
 
     const playSuccessChime = () => {
       try {
@@ -126,7 +132,7 @@
               setTimeout(() => {
                   setLocalCache({
                     classes: { "SIMULASI-123": { id_kelas: "K-01", nama_kelas: "Kelas VII A", lokasi_ruang: "Ruang 1" } },
-                    schedules: { "Kelas VII A": [{ jam_mulai: "01:00", jam_selesai: "23:00", nama_guru: "Guru Simulasi, S.Pd.", mata_pelajaran: "Simulasi IT", nip: "123456" }] }
+                    schedules: { "Kelas VII A": [{ jam_ke: "1-2", mapel_ke: "1", jam_mulai: "07:00", jam_selesai: "23:00", nama_guru: "Drs. Budi Santoso", mata_pelajaran: "Matematika", nip: "123456" }] }
                   });
                   setSyncStatus('success');
               }, 1000);
@@ -151,25 +157,6 @@
         fetchScheduleLocally();
       }, [currentDay, syncStatus]);
 
-      const checkScheduleByTime = (schedules) => {
-        if (!schedules || schedules.length === 0) return null;
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-        for (let sched of schedules) {
-          if (!sched.jam_mulai || !sched.jam_selesai) continue;
-          const startParts = sched.jam_mulai.toString().replace('.', ':').split(':');
-          const endParts = sched.jam_selesai.toString().replace('.', ':').split(':');
-          if (startParts.length < 2 || endParts.length < 2) continue;
-
-          const startMins = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
-          const endMins = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-
-          if (currentMinutes >= startMins && currentMinutes <= endMins) return sched;
-        }
-        return null;
-      };
-
       const handleQrMatch = (token) => {
         setScannedToken(token);
         
@@ -186,31 +173,66 @@
           return;
         }
 
-        // PENTING: Mencari di Schedules menggunakan NAMA KELAS (Relasional)
         const schedules = localCache.schedules[kelas.nama_kelas.trim()];
-        const activeSched = checkScheduleByTime(schedules);
+        
+        // Cari Jadwal Saat Ini & Jadwal Selanjutnya
+        let activeSched = null;
+        let nextSched = null;
+
+        if (schedules && schedules.length > 0) {
+          const now = new Date();
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+          for (let i = 0; i < schedules.length; i++) {
+            const sched = schedules[i];
+            if (!sched.jam_mulai || !sched.jam_selesai) continue;
+            
+            const startParts = sched.jam_mulai.toString().replace('.', ':').split(':');
+            const endParts = sched.jam_selesai.toString().replace('.', ':').split(':');
+            if (startParts.length < 2 || endParts.length < 2) continue;
+
+            const startMins = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+            const endMins = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+
+            if (currentMinutes >= startMins && currentMinutes <= endMins) {
+              activeSched = sched;
+              // Jika ini jadwal yang cocok, intip 1 jadwal setelahnya
+              if (i + 1 < schedules.length) {
+                nextSched = schedules[i + 1];
+              }
+              break;
+            }
+          }
+        }
 
         if (activeSched) {
           setScanResult({
             id_kelas: kelas.id_kelas, 
             nama_kelas: kelas.nama_kelas, 
             lokasi_ruang: kelas.lokasi_ruang,
+            jam_ke: activeSched.jam_ke,
+            mapel_ke: activeSched.mapel_ke,
             teacherName: activeSched.nama_guru, 
             nip: activeSched.nip, 
             subject: activeSched.mata_pelajaran,
             waktu_mulai: activeSched.jam_mulai, 
-            waktu_selesai: activeSched.jam_selesai
+            waktu_selesai: activeSched.jam_selesai,
+            // Info Guru Selanjutnya
+            nextTeacher: nextSched ? { nama: nextSched.nama_guru, mapel: nextSched.mata_pelajaran } : null
           });
         } else {
           setScanResult({
             id_kelas: kelas.id_kelas, 
             nama_kelas: kelas.nama_kelas, 
             lokasi_ruang: kelas.lokasi_ruang,
+            jam_ke: "-",
+            mapel_ke: "-",
             teacherName: "Luar Jam Pelajaran", 
             nip: "-", 
-            subject: "Tidak ada jadwal (Mapel Ekstra)",
+            subject: "Kegiatan Ekstra/Kosong",
             waktu_mulai: "-", 
-            waktu_selesai: "-"
+            waktu_selesai: "-",
+            nextTeacher: null
           });
         }
         setModalPhase('FORM');
@@ -240,7 +262,7 @@
             setModalPhase('ERROR');
           }
         }).catch(err => {
-           setApiError("Izin kamera ditolak. Mohon izinkan akses kamera di pengaturan browser.");
+           setApiError("Izin kamera ditolak. Mohon izinkan akses kamera pada pop-up browser.");
            setModalPhase('ERROR');
         });
       };
@@ -282,6 +304,7 @@
         try {
           const response = await fetch(API_URL, {
             method: 'POST',
+            // Trik Bypass CORS Preflight GAS
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'submit', payload: payload })
           });
@@ -292,7 +315,7 @@
             setScanResult({ ...scanResult, timestamp: resData.data.waktu_absen });
             setModalPhase('SUCCESS');
           } else {
-            setApiError(resData.message || 'Gagal menyimpan.');
+            setApiError(resData.message || 'Gagal menyimpan data.');
             setModalPhase('ERROR');
           }
         } catch (err) {
@@ -350,14 +373,13 @@
 
             <div className="w-full rounded-2xl p-4 text-left space-y-3.5 text-[11px] text-slate-300 shadow-md" style={{backgroundColor: '#131c33', border: '1px solid #1e2c4a'}}>
               <div className="flex items-start gap-3"><span className="flex items-center justify-center w-5 h-5 rounded-full font-bold text-[10px] flex-shrink-0 mt-0.5" style={{backgroundColor: '#1d3257', color: '#60a5fa'}}>1</span><p>Ketuk tombol <strong className="text-white">Mulai Absen</strong> di tengah layar.</p></div>
-              <div className="flex items-start gap-3"><span className="flex items-center justify-center w-5 h-5 rounded-full font-bold text-[10px] flex-shrink-0 mt-0.5" style={{backgroundColor: '#1d3257', color: '#60a5fa'}}>2</span><p>Izinkan akses kamera di pop-up browser Anda.</p></div>
+              <div className="flex items-start gap-3"><span className="flex items-center justify-center w-5 h-5 rounded-full font-bold text-[10px] flex-shrink-0 mt-0.5" style={{backgroundColor: '#1d3257', color: '#60a5fa'}}>2</span><p>Izinkan akses kamera pada pop-up browser Anda.</p></div>
               <div className="flex items-start gap-3"><span className="flex items-center justify-center w-5 h-5 rounded-full font-bold text-[10px] flex-shrink-0 mt-0.5" style={{backgroundColor: '#1d3257', color: '#60a5fa'}}>3</span><p>Arahkan kamera ke Kode QR di kelas Anda.</p></div>
             </div>
           </main>
 
           <footer className="z-10 w-full text-center py-4"><h2 className="text-xs font-bold text-slate-300 tracking-wide">SMP Negeri 1 Pagaden</h2></footer>
 
-          {}
           {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{backgroundColor: 'rgba(5, 8, 18, 0.85)'}}>
               <div className="relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col" style={{backgroundColor: '#0f172a', border: '1px solid #1e293b'}}>
@@ -368,6 +390,7 @@
                 </div>
 
                 <div className="p-5 flex flex-col items-center justify-center min-h-[300px]">
+                  
                   {modalPhase === 'PERMISSION' && (
                     <div className="flex flex-col items-center justify-center py-10 text-center"><SpinnerIcon className="w-12 h-12 text-blue-400 mb-4" />
                       <p className="text-sm font-semibold text-slate-200">Meminta Akses Kamera</p>
@@ -394,14 +417,46 @@
 
                   {modalPhase === 'FORM' && scanResult && (
                     <div className="w-full animate-in fade-in zoom-in-95 duration-300">
-                      <div className="rounded-2xl p-4 mb-4 shadow-lg" style={{background: 'linear-gradient(135deg, #1e293b, #111827)', border: '1px solid #334155'}}>
-                        <div className="flex justify-between items-start mb-2"><span className="bg-blue-500/20 text-blue-400 text-[10px] font-bold px-2.5 py-1 rounded-full">{scanResult.nama_kelas}</span><span className="text-[10px] text-slate-400 font-mono mt-0.5">{scanResult.lokasi_ruang}</span></div>
-                        <h4 className="text-base font-extrabold text-white mt-1">{scanResult.teacherName}</h4>
-                        <p className="text-xs text-blue-300 font-medium mt-1">{scanResult.subject}</p>
+                      
+                      {/* DESAIN KOTAK JADWAL BARU */}
+                      <div className="rounded-2xl p-4 mb-4 shadow-lg relative overflow-hidden border" style={{background: 'linear-gradient(135deg, #1e293b, #0f172a)', borderColor: '#334155'}}>
+                        
+                        {/* 1. Bagian Atas: Badge Kelas & Jam Ke */}
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="relative">
+                             <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-75"></div>
+                             <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-emerald-500"></div>
+                             <span className="bg-blue-500/20 text-blue-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ml-2">{scanResult.nama_kelas}</span>
+                          </div>
+                          <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2.5 py-1 rounded-full border border-indigo-500/30">Jam ke-{scanResult.jam_ke} | Mapel {scanResult.mapel_ke}</span>
+                        </div>
+                        
+                        {/* 2. Bagian Tengah: Nama Guru & Ikon */}
+                        <h4 className="text-base font-extrabold text-white mt-3 leading-tight">{scanResult.teacherName}</h4>
+                        <p className="text-xs text-blue-300 font-medium mt-1.5 flex items-center gap-1.5"><BookIcon /> {scanResult.subject}</p>
+                        
+                        {/* Waktu dan Ruangan (Divider maya) */}
+                        <div className="flex items-center gap-2 mt-3.5 pt-1 text-[10px] text-slate-400 font-medium">
+                          <span className="flex items-center gap-1"><ClockIcon /> {scanResult.waktu_mulai} - {scanResult.waktu_selesai} WIB</span>
+                          <span className="text-slate-600">•</span>
+                          <span className="flex items-center gap-1"><LocationIcon /> {scanResult.lokasi_ruang}</span>
+                        </div>
+
+                        {/* 3. Bagian Bawah: Guru Selanjutnya (Next Up) */}
+                        {scanResult.nextTeacher && (
+                          <div className="mt-4 pt-3" style={{borderTop: '1px solid rgba(51, 65, 85, 0.6)'}}>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><NextIcon /> Selanjutnya:</p>
+                            <p className="text-[11px] text-slate-300 truncate">
+                              <span className="font-bold text-slate-200">{scanResult.nextTeacher.nama}</span> <span className="text-slate-500">({scanResult.nextTeacher.mapel})</span>
+                            </p>
+                          </div>
+                        )}
                       </div>
+                      {/* AKHIR KOTAK JADWAL BARU */}
+
                       <div className="space-y-4 w-full">
                         <div>
-                          <textarea value={kegiatan} onChange={(e) => setKegiatan(e.target.value)} placeholder="Materi yang diajarkan..." className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 transition-all resize-none h-20"></textarea>
+                          <textarea value={kegiatan} onChange={(e) => setKegiatan(e.target.value)} placeholder="Materi yang diajarkan..." className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 transition-all resize-none h-20 outline-none"></textarea>
                         </div>
                         <label className="flex items-center gap-3 p-3 border border-slate-700 rounded-xl cursor-pointer" style={{backgroundColor: '#131e33'}}>
                           <div className="relative flex items-center"><input type="checkbox" checked={isPengganti} onChange={(e) => setIsPengganti(e.target.checked)} className="sr-only peer" />
@@ -445,6 +500,7 @@
         </div>
       );
     }
+    
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
